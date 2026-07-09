@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>半加算器・全加算器 徹底インタラクティブ解説</title>
+<style>
+  :root{
+    --bg:#0f1220; --bg2:#161a2e; --card:#1b2039; --card2:#222a4a;
+    --ink:#e8ecff; --muted:#9aa3c7; --line:#333c66;
+    --accent:#6ea8ff; --accent2:#8b5cf6;
+    --on:#ffcb47; --off:#3a4166;
+    --hi:#25c2a0; --carry:#ff7a7a; --sum:#6ee7ff;
+    --hs:#a3e635; --hc:#f0abfc;
+    --good:#25c2a0;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#eef1fb; --bg2:#e3e8fa; --card:#ffffff; --card2:#f3f5ff;
+      --ink:#1a1f3d; --muted:#5a6488; --line:#d3d9f0;
+      --off:#c8cee6; --shadow:0 10px 30px rgba(60,70,120,.14);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#eef1fb; --bg2:#e3e8fa; --card:#ffffff; --card2:#f3f5ff;
+    --ink:#1a1f3d; --muted:#5a6488; --line:#d3d9f0; --off:#c8cee6;
+    --shadow:0 10px 30px rgba(60,70,120,.14);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1220; --bg2:#161a2e; --card:#1b2039; --card2:#222a4a;
+    --ink:#e8ecff; --muted:#9aa3c7; --line:#333c66; --off:#3a4166;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(1200px 600px at 80% -10%,var(--bg2),var(--bg));
+    color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:960px; margin:0 auto; padding:32px 20px 100px}
+  header.top{text-align:center; padding:24px 0 8px}
+  header.top h1{font-size:clamp(26px,5vw,40px); margin:0 0 6px; letter-spacing:.02em}
+  header.top h1 .g{background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  header.top p{color:var(--muted); margin:4px 0}
+  .theme-btn{position:fixed; top:14px; right:14px; z-index:50; background:var(--card); color:var(--ink);
+    border:1px solid var(--line); border-radius:999px; padding:8px 14px; cursor:pointer; font-size:14px; box-shadow:var(--shadow)}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:26px; margin:26px 0; box-shadow:var(--shadow)}
+  h2.sec{font-size:clamp(20px,3.4vw,28px); margin:0 0 4px; display:flex; align-items:center; gap:12px}
+  h2.sec .num{display:inline-grid; place-items:center; width:38px; height:38px; border-radius:12px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; font-size:18px; font-weight:800; flex:none}
+  h3{margin:26px 0 8px; font-size:18px; color:var(--ink)}
+  p.lead{color:var(--muted); margin-top:2px}
+  .muted{color:var(--muted)}
+  code, .k{font-family:var(--mono); background:var(--card2); padding:2px 7px; border-radius:6px; font-size:.92em; border:1px solid var(--line)}
+  .pill{display:inline-block; padding:2px 10px; border-radius:999px; font-weight:700; font-size:.85em}
+  .pill.sum{background:color-mix(in srgb,var(--sum) 22%,transparent); color:var(--sum); border:1px solid var(--sum)}
+  .pill.carry{background:color-mix(in srgb,var(--carry) 22%,transparent); color:var(--carry); border:1px solid var(--carry)}
+  .pill.hs{background:color-mix(in srgb,var(--hs) 22%,transparent); color:var(--hs); border:1px solid var(--hs)}
+  .pill.hc{background:color-mix(in srgb,var(--hc) 22%,transparent); color:var(--hc); border:1px solid var(--hc)}
+
+  /* bit toggles */
+  .inputs{display:flex; flex-wrap:wrap; gap:18px; align-items:center; margin:6px 0 4px}
+  .bit{display:flex; flex-direction:column; align-items:center; gap:8px}
+  .bit .lab{font-weight:800; font-size:15px; color:var(--muted)}
+  .toggle{width:78px; height:78px; border-radius:18px; border:2px solid var(--line); cursor:pointer;
+    background:var(--off); color:#0b0e18; font-size:34px; font-weight:900; transition:.15s; position:relative; user-select:none}
+  .toggle.on{background:var(--on); box-shadow:0 0 0 4px color-mix(in srgb,var(--on) 35%,transparent), var(--shadow); transform:translateY(-2px)}
+  .toggle:active{transform:scale(.96)}
+  .hint{font-size:13px; color:var(--muted); margin-top:2px}
+
+  /* outputs readout */
+  .readout{display:flex; flex-wrap:wrap; gap:14px; margin:18px 0 4px}
+  .out{flex:1 1 130px; background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:14px 16px; text-align:center}
+  .out .name{font-size:13px; color:var(--muted); font-weight:700; letter-spacing:.03em}
+  .out .val{font-size:40px; font-weight:900; line-height:1.1; font-family:var(--mono)}
+  .out.sum .val{color:var(--sum)} .out.carry .val{color:var(--carry)}
+  .out.hs .val{color:var(--hs)} .out.hc .val{color:var(--hc)}
+
+  /* equation */
+  .eq{font-family:var(--mono); font-size:16px; background:var(--card2); border:1px solid var(--line);
+    border-radius:12px; padding:14px 16px; margin:10px 0; overflow-x:auto; white-space:nowrap}
+  .eq b{color:var(--accent)}
+  .tk{padding:1px 6px; border-radius:6px; font-weight:800}
+  .tk.one{background:var(--on); color:#0b0e18}
+  .tk.zero{background:var(--off); color:var(--ink)}
+  .tk.eq1{outline:2px solid var(--hi)}
+
+  /* truth table */
+  table{width:100%; border-collapse:collapse; margin:10px 0; font-family:var(--mono); overflow:hidden; border-radius:12px}
+  .tblwrap{overflow-x:auto; border:1px solid var(--line); border-radius:12px}
+  th,td{padding:10px 8px; text-align:center; border-bottom:1px solid var(--line); font-size:15px}
+  thead th{background:var(--card2); color:var(--muted); font-size:13px; letter-spacing:.03em}
+  th.in{color:var(--accent)}
+  th.sum{color:var(--sum)} th.carry{color:var(--carry)}
+  th.hs{color:var(--hs)} th.hc{color:var(--hc)}
+  tbody tr{cursor:pointer; transition:background .12s}
+  tbody tr:hover{background:var(--card2)}
+  tbody tr.active{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+  tbody tr.active td{font-weight:800}
+  td .b1{color:var(--on)}
+
+  /* SVG circuit */
+  .circuit{width:100%; background:var(--card2); border:1px solid var(--line); border-radius:14px; margin:12px 0}
+  .wire{stroke:var(--line); stroke-width:3; fill:none; transition:stroke .15s}
+  .wire.hot{stroke:var(--on); stroke-width:4}
+  .gate{fill:var(--card); stroke:var(--ink); stroke-width:2}
+  .glab{fill:var(--ink); font:700 13px var(--mono); text-anchor:middle; dominant-baseline:middle}
+  .plab{fill:var(--muted); font:700 14px var(--mono)}
+  .node{fill:var(--line)} .node.hot{fill:var(--on)}
+  .valbadge{font:900 15px var(--mono)}
+
+  /* fraction / column addition */
+  .colsum{display:inline-grid; justify-items:end; font-family:var(--mono); font-size:30px; font-weight:800;
+    background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:16px 26px; margin:8px 0; gap:2px}
+  .colsum .row{display:flex; gap:6px; align-items:baseline}
+  .colsum .op{color:var(--muted); margin-right:10px}
+  .colsum .bar{border-top:3px solid var(--ink); width:100%; margin:6px 0 4px}
+  .colsum .carrytiny{font-size:14px; color:var(--carry); height:18px}
+  .digit{width:26px; text-align:center}
+  .digit.c{color:var(--carry)} .digit.s{color:var(--sum)} .digit.on{color:var(--on)}
+
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:22px}
+  @media(max-width:720px){ .two{grid-template-columns:1fr} }
+  .note{border-left:4px solid var(--accent); background:var(--card2); padding:12px 16px; border-radius:0 12px 12px 0; margin:14px 0}
+  .note.warn{border-color:var(--carry)}
+  ul.clean{padding-left:20px} ul.clean li{margin:6px 0}
+  .toc{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:14px 0 0}
+  .toc a{text-decoration:none; color:var(--ink); background:var(--card); border:1px solid var(--line);
+    padding:7px 14px; border-radius:999px; font-size:14px}
+  .toc a:hover{border-color:var(--accent); color:var(--accent)}
+  .kbd{font-family:var(--mono); background:var(--card2); border:1px solid var(--line); border-bottom-width:2px; padding:1px 7px; border-radius:6px; font-size:.85em}
+  footer{text-align:center; color:var(--muted); margin-top:40px; font-size:14px}
+  .flow{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-family:var(--mono); font-weight:700}
+  .flow .box{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px 12px}
+  .flow .arrow{color:var(--muted)}
+</style>
+</head>
+<body>
+<button class="theme-btn" id="themeBtn">🌗 テーマ</button>
+<div class="wrap">
+
+<header class="top">
+  <h1>半加算器 と <span class="g">全加算器</span></h1>
+  <p>クリックで動く、論理回路の徹底解説</p>
+  <p class="muted">入力ビットを押すと ゲート図・真理値表・式・筆算 がすべて連動します</p>
+  <nav class="toc">
+    <a href="#binary">① 2進数の足し算</a>
+    <a href="#half">② 半加算器</a>
+    <a href="#full">③ 全加算器</a>
+    <a href="#ripple">④ 多ビット加算</a>
+    <a href="#summary">⑤ まとめ表</a>
+  </nav>
+</header>
+
+<!-- ================= 0. BINARY ================= -->
+<section class="card" id="binary">
+  <h2 class="sec"><span class="num">①</span> まず：2進数の足し算とは</h2>
+  <p class="lead">加算器が計算しているのは、10進数ではなく <b>2進数の1桁どうしの足し算</b>です。</p>
+
+  <p>2進数では、使える数字は <span class="k">0</span> と <span class="k">1</span> だけ。1桁の足し算は次の4通りしかありません。
+  「桁があふれる（＝繰り上がり）」ことに注目してください。</p>
+
+  <div class="two">
+    <div>
+      <div class="colsum">
+        <div class="row"><span class="op"> </span><span class="digit">0</span></div>
+        <div class="row"><span class="op">+</span><span class="digit">0</span></div>
+        <div class="bar"></div>
+        <div class="row"><span class="digit c">0</span><span class="digit s on">0</span></div>
+      </div>
+      <div class="colsum">
+        <div class="row"><span class="op"> </span><span class="digit on">1</span></div>
+        <div class="row"><span class="op">+</span><span class="digit">0</span></div>
+        <div class="bar"></div>
+        <div class="row"><span class="digit c">0</span><span class="digit s on">1</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="colsum">
+        <div class="row"><span class="op"> </span><span class="digit">0</span></div>
+        <div class="row"><span class="op">+</span><span class="digit on">1</span></div>
+        <div class="bar"></div>
+        <div class="row"><span class="digit c">0</span><span class="digit s on">1</span></div>
+      </div>
+      <div class="colsum">
+        <div class="carrytiny">↖ 繰り上がり</div>
+        <div class="row"><span class="op"> </span><span class="digit on">1</span></div>
+        <div class="row"><span class="op">+</span><span class="digit on">1</span></div>
+        <div class="bar"></div>
+        <div class="row"><span class="digit c on">1</span><span class="digit s on">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>10 進数との対応（分数＝桁の重み）：</b> 2進数の各桁は <code>… 4 · 2 · 1</code> の重みを持ちます。
+    一番右の桁が <b>1の位</b>、その左が <b>2の位</b>。<br>
+    たとえば <code>1 + 1</code> は 10進数の <b>2</b>。2進数では
+    <code><span class="digit c">1</span>×2 + <span class="digit s">0</span>×1 = 2</code> なので、
+    上の桁（繰り上がり = <span class="pill carry">carry</span>）が <code>1</code>、下の桁（和 = <span class="pill sum">sum</span>）が <code>0</code> になります。
+  </div>
+
+  <p>この <b>「和(sum)」</b>と <b>「繰り上がり(carry)」</b>の2つを出力する回路 —— それが加算器です。
+  出力が2つ必要なのは、<code>1+1</code> のように答えが1桁に収まらない場合があるからです。</p>
+</section>
+
+<!-- ================= 1. HALF ADDER ================= -->
+<section class="card" id="half">
+  <h2 class="sec"><span class="num">②</span> 半加算器 (Half Adder)</h2>
+  <p class="lead">入力2つ <span class="k">A</span> <span class="k">B</span> を足して、
+  和 <span class="pill sum">sum (S)</span> と 繰り上がり <span class="pill carry">carry (C)</span> を出す、いちばん基本の回路。</p>
+
+  <p>「Half（半分）」と呼ぶ理由は、<b>下の桁からの繰り上がりを受け取れない</b>から。
+  だから2ビット目以降には使えず、あくまで一番下の桁専用です。</p>
+
+  <div class="inputs">
+    <div class="bit">
+      <span class="lab">A</span>
+      <button class="toggle" id="ha_A">0</button>
+    </div>
+    <div class="bit">
+      <span class="lab">B</span>
+      <button class="toggle" id="ha_B">0</button>
+    </div>
+    <div style="align-self:center; color:var(--muted)">← クリックで 0/1 を切り替え</div>
+  </div>
+
+  <!-- circuit -->
+  <svg class="circuit" id="ha_svg" viewBox="0 0 640 260" role="img" aria-label="半加算器の回路図">
+    <!-- input labels -->
+    <text class="plab" x="20" y="70">A</text>
+    <text class="plab" x="20" y="180">B</text>
+    <!-- A wire splits -->
+    <path class="wire" id="ha_wA_x" d="M40 64 H150 V90 H300"/>
+    <path class="wire" id="ha_wA_a" d="M110 64 V150 H300"/>
+    <!-- B wire splits -->
+    <path class="wire" id="ha_wB_x" d="M40 174 H150 V120 H300"/>
+    <path class="wire" id="ha_wB_a" d="M80 174 V170 H300"/>
+    <circle class="node" id="ha_nA" cx="110" cy="64" r="5"/>
+    <circle class="node" id="ha_nB" cx="80" cy="174" r="5"/>
+    <!-- XOR gate (sum) -->
+    <g transform="translate(300,75)">
+      <path class="gate" d="M0 0 q22 30 0 60 q40 -2 62 -30 q-22 -28 -62 -30 Z"/>
+      <path class="wire" d="M-8 0 q22 30 0 60" style="stroke:var(--ink);stroke-width:2"/>
+      <text class="glab" x="30" y="30">XOR</text>
+    </g>
+    <!-- AND gate (carry) -->
+    <g transform="translate(300,140)">
+      <path class="gate" d="M0 0 H30 a30 30 0 0 1 0 60 H0 Z"/>
+      <text class="glab" x="22" y="30">AND</text>
+    </g>
+    <!-- outputs -->
+    <path class="wire" id="ha_wS" d="M362 105 H560"/>
+    <path class="wire" id="ha_wC" d="M360 170 H560"/>
+    <text class="plab" x="566" y="110" style="fill:var(--sum)">S = sum</text>
+    <text class="plab" x="566" y="175" style="fill:var(--carry)">C = carry</text>
+    <text class="valbadge" id="ha_bS" x="520" y="96" style="fill:var(--sum)">0</text>
+    <text class="valbadge" id="ha_bC" x="520" y="161" style="fill:var(--carry)">0</text>
+  </svg>
+
+  <div class="readout">
+    <div class="out sum"><div class="name">和 SUM (S)</div><div class="val" id="ha_S">0</div><div class="hint">= A XOR B</div></div>
+    <div class="out carry"><div class="name">繰り上がり CARRY (C)</div><div class="val" id="ha_C">0</div><div class="hint">= A AND B</div></div>
+  </div>
+
+  <h3>いま起きている計算</h3>
+  <div class="eq" id="ha_eqS"></div>
+  <div class="eq" id="ha_eqC"></div>
+
+  <div class="two" style="margin-top:8px">
+    <div>
+      <h3>真理値表</h3>
+      <div class="tblwrap">
+        <table id="ha_tbl">
+          <thead><tr>
+            <th class="in">A</th><th class="in">B</th>
+            <th class="carry">C (carry)</th><th class="sum">S (sum)</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="hint">行をクリックしても入力を切り替えられます。</p>
+    </div>
+    <div>
+      <h3>筆算（分数型）で見る</h3>
+      <div class="colsum" id="ha_colsum" style="font-size:34px">
+        <div class="row"><span class="op"> </span><span class="digit" id="ha_pa">0</span></div>
+        <div class="row"><span class="op">+</span><span class="digit" id="ha_pb">0</span></div>
+        <div class="bar"></div>
+        <div class="row"><span class="digit c" id="ha_pc">0</span><span class="digit s" id="ha_ps">0</span></div>
+      </div>
+      <div class="note">
+        分数のように「上（＝入力）」を足して「下（＝答え）」を線の下に書きます。<br>
+        答えの <b>左の桁</b>が <span class="pill carry">C</span>、<b>右の桁</b>が <span class="pill sum">S</span>。
+      </div>
+    </div>
+  </div>
+
+  <div class="note warn">
+    <b>ポイント：</b> <code>XOR</code>（排他的論理和）は「入力が違えば1」。
+    <code>AND</code>（論理積）は「両方1のときだけ1」。
+    <code>1+1</code> のときだけ AND が反応して繰り上がり C=1、和 S=0 になります。
+  </div>
+</section>
+
+<!-- ================= 2. FULL ADDER ================= -->
+<section class="card" id="full">
+  <h2 class="sec"><span class="num">③</span> 全加算器 (Full Adder)</h2>
+  <p class="lead">入力を3つに拡張：<span class="k">A</span> <span class="k">B</span> と、
+  <b>下の桁からの繰り上がり</b> <span class="k">Cin</span>。
+  出力は 和 <span class="pill sum">sum</span> と 繰り上がり <span class="pill carry">carry (Cout)</span>。</p>
+
+  <p>全加算器は <b>半加算器を2つ</b>つないで作れます。1個目のHAで <code>A+B</code> を計算し、
+  その和にさらに <code>Cin</code> を2個目のHAで足す —— という2段構えです。</p>
+
+  <div class="inputs">
+    <div class="bit"><span class="lab">A</span><button class="toggle" id="fa_A">0</button></div>
+    <div class="bit"><span class="lab">B</span><button class="toggle" id="fa_B">0</button></div>
+    <div class="bit"><span class="lab">Cin</span><button class="toggle" id="fa_Cin">0</button></div>
+    <div style="align-self:center; color:var(--muted)">← 3つとも 0/1 切り替え可</div>
+  </div>
+
+  <!-- decomposition circuit -->
+  <svg class="circuit" id="fa_svg" viewBox="0 0 680 320" role="img" aria-label="全加算器の回路図（半加算器2つ）">
+    <!-- HA1 box -->
+    <rect x="150" y="30" width="150" height="120" rx="12" fill="none" stroke="var(--line)" stroke-dasharray="6 5"/>
+    <text class="plab" x="160" y="24" style="fill:var(--accent)">半加算器 1</text>
+    <!-- HA2 box -->
+    <rect x="400" y="90" width="150" height="140" rx="12" fill="none" stroke="var(--line)" stroke-dasharray="6 5"/>
+    <text class="plab" x="410" y="84" style="fill:var(--accent)">半加算器 2</text>
+
+    <!-- inputs -->
+    <text class="plab" x="24" y="60">A</text>
+    <text class="plab" x="24" y="110">B</text>
+    <text class="plab" x="18" y="255">Cin</text>
+
+    <path class="wire" id="fa_wA" d="M44 54 H150"/>
+    <path class="wire" id="fa_wB" d="M44 104 H150"/>
+
+    <!-- HA1 gates simplified as labeled blocks -->
+    <rect class="gate" x="170" y="45" width="60" height="30" rx="6"/>
+    <text class="glab" x="200" y="60">XOR</text>
+    <rect class="gate" x="170" y="105" width="60" height="30" rx="6"/>
+    <text class="glab" x="200" y="120">AND</text>
+
+    <!-- HA1 outputs: hs, hc -->
+    <path class="wire" id="fa_whs" d="M230 60 H330 V150 H400"/>
+    <path class="wire" id="fa_whc" d="M230 120 H340 V292 H355"/>
+    <text class="plab" x="300" y="52" style="fill:var(--hs)">hs</text>
+    <text class="plab" x="300" y="112" style="fill:var(--hc)">hc</text>
+
+    <!-- Cin into HA2 -->
+    <path class="wire" id="fa_wCin" d="M44 250 H400 V200 H400"/>
+
+    <!-- HA2 gates -->
+    <rect class="gate" x="420" y="135" width="60" height="30" rx="6"/>
+    <text class="glab" x="450" y="150">XOR</text>
+    <rect class="gate" x="420" y="185" width="60" height="30" rx="6"/>
+    <text class="glab" x="450" y="200">AND</text>
+
+    <!-- HA2 sum out = final SUM -->
+    <path class="wire" id="fa_wSum" d="M480 150 H620"/>
+    <text class="plab" x="600" y="140" style="fill:var(--sum)">Sum</text>
+    <text class="valbadge" id="fa_bSum" x="560" y="142" style="fill:var(--sum)">0</text>
+
+    <!-- HA2 carry (hc2) -->
+    <path class="wire" id="fa_whc2" d="M480 200 H560 V272 H355"/>
+    <text class="plab" x="500" y="264" style="fill:var(--hc)">hc₂</text>
+
+    <!-- OR gate for final carry: inputs hc + hc2 -->
+    <path class="gate" id="fa_or" d="M355 260 Q374 260 405 282 Q374 304 355 304 Q373 282 355 260 Z"/>
+    <text class="glab" x="376" y="283">OR</text>
+    <path class="wire" id="fa_wCout" d="M405 282 H620"/>
+    <text class="plab" x="600" y="276" style="fill:var(--carry)">Cout</text>
+    <text class="valbadge" id="fa_bCout" x="560" y="278" style="fill:var(--carry)">0</text>
+  </svg>
+
+  <!-- intermediate + final readouts -->
+  <h3>中間の値（半加算器1の出力）</h3>
+  <div class="readout">
+    <div class="out hs"><div class="name">hs (half-sum)</div><div class="val" id="fa_hs">0</div><div class="hint">= A XOR B</div></div>
+    <div class="out hc"><div class="name">hc (half-carry)</div><div class="val" id="fa_hc">0</div><div class="hint">= A AND B</div></div>
+  </div>
+  <h3>最終出力</h3>
+  <div class="readout">
+    <div class="out sum"><div class="name">SUM</div><div class="val" id="fa_Sum">0</div><div class="hint">= hs XOR Cin</div></div>
+    <div class="out carry"><div class="name">CARRY (Cout)</div><div class="val" id="fa_Cout">0</div><div class="hint">= hc OR (hs AND Cin)</div></div>
+  </div>
+
+  <h3>信号の流れ</h3>
+  <div class="flow" style="margin:8px 0 4px">
+    <span class="box">A,B</span><span class="arrow">→</span>
+    <span class="box" style="border-color:var(--hs)">HA1: hs = A⊕B</span>
+    <span class="arrow">→</span>
+    <span class="box" style="border-color:var(--sum)">HA2: Sum = hs⊕Cin</span>
+  </div>
+  <div class="flow" style="margin:4px 0">
+    <span class="box" style="border-color:var(--hc)">hc = A·B</span><span class="arrow">＋</span>
+    <span class="box" style="border-color:var(--hc)">hc₂ = hs·Cin</span><span class="arrow">→ OR →</span>
+    <span class="box" style="border-color:var(--carry)">Cout</span>
+  </div>
+
+  <h3>いま起きている計算</h3>
+  <div class="eq" id="fa_eqHs"></div>
+  <div class="eq" id="fa_eqSum"></div>
+  <div class="eq" id="fa_eqCout"></div>
+
+  <div class="two" style="margin-top:8px">
+    <div>
+      <h3>真理値表（8通り）</h3>
+      <div class="tblwrap">
+        <table id="fa_tbl">
+          <thead><tr>
+            <th class="in">A</th><th class="in">B</th><th class="in">Cin</th>
+            <th class="carry">Cout</th><th class="sum">Sum</th>
+            <th class="muted" style="font-size:12px">10進</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <h3>筆算（分数型）で見る</h3>
+      <div class="colsum" id="fa_colsum" style="font-size:30px">
+        <div class="carrytiny" id="fa_cinlabel">Cin ↘</div>
+        <div class="row"><span class="op"> </span><span class="digit" id="fa_pa">0</span></div>
+        <div class="row"><span class="op">+</span><span class="digit" id="fa_pb">0</span></div>
+        <div class="row"><span class="op">+</span><span class="digit c" id="fa_pcin">0</span></div>
+        <div class="bar"></div>
+        <div class="row"><span class="digit c" id="fa_pcout">0</span><span class="digit s" id="fa_psum">0</span></div>
+      </div>
+      <div class="note">
+        3つの入力（A・B・Cin）を足し、答えの2桁を線の下へ。<br>
+        <b>合計3</b>（A=B=Cin=1）のときが最大で、
+        <code><span class="digit c">1</span><span class="digit s">1</span></code>
+        ＝ 10進の 3 になります。
+      </div>
+    </div>
+  </div>
+
+  <div class="note warn">
+    <b>なぜ carry は OR？</b> 繰り上がりは
+    「HA1で出た(A·B)」<b>または</b>「HA2で出た(hs·Cin)」のどちらかが立てば発生します。
+    2つの繰り上がりが同時に1になることは起きない（＝両方立たない）ので、単純な OR で足りるのがポイントです。
+  </div>
+</section>
+
+<!-- ================= 3. RIPPLE ================= -->
+<section class="card" id="ripple">
+  <h2 class="sec"><span class="num">④</span> つなげて多ビット加算（リップルキャリー）</h2>
+  <p class="lead">全加算器を横に並べ、各桁の <span class="pill carry">Cout</span> を
+  次の桁の <span class="k">Cin</span> に渡すと、何ビットの数でも足せます。</p>
+
+  <p>下は 4ビット同士の加算 <span class="k" id="rp_expr">0000 + 0000</span> の例。
+  A・B の各桁ボタンを押して、繰り上がりが左へ「さざ波（ripple）」のように伝わる様子を見てください。</p>
+
+  <div style="overflow-x:auto">
+    <table style="max-width:520px; margin:10px auto; font-size:16px">
+      <tbody>
+        <tr>
+          <td class="muted" style="text-align:right">桁の重み</td>
+          <td class="muted">8</td><td class="muted">4</td><td class="muted">2</td><td class="muted">1</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="muted" style="text-align:right">A</td>
+          <td><button class="toggle rpbit" data-side="A" data-i="3" style="width:48px;height:48px;font-size:22px;border-radius:12px">0</button></td>
+          <td><button class="toggle rpbit" data-side="A" data-i="2" style="width:48px;height:48px;font-size:22px;border-radius:12px">0</button></td>
+          <td><button class="toggle rpbit" data-side="A" data-i="1" style="width:48px;height:48px;font-size:22px;border-radius:12px">0</button></td>
+          <td><button class="toggle rpbit" data-side="A" data-i="0" style="width:48px;height:48px;font-size:22px;border-radius:12px">0</button></td>
+          <td class="muted" id="rp_Adec">= 0</td>
+        </tr>
+        <tr>
+          <td class="muted" style="text-align:right">B</td>
+          <td><button class="toggle rpbit" data-side="B" data-i="3" style="width:48px;height:48px;font-size:22px;border-radius:12px">0</button></td>
+          <td><button class="toggle rpbit" data-side="B" data-i="2" style="width:48px;height:48px;font-size:22px;border-radius:12px">0</button></td>
+          <td><button class="toggle rpbit" data-side="B" data-i="1" style="width:48px;height:48px;font-size:22px;border-radius:12px">0</button></td>
+          <td><button class="toggle rpbit" data-side="B" data-i="0" style="width:48px;height:48px;font-size:22px;border-radius:12px">0</button></td>
+          <td class="muted" id="rp_Bdec">= 0</td>
+        </tr>
+        <tr style="color:var(--carry); font-family:var(--mono)">
+          <td class="muted" style="text-align:right">繰り上がり</td>
+          <td id="rp_c4">0</td><td id="rp_c3">0</td><td id="rp_c2">0</td><td id="rp_c1">0</td>
+          <td></td>
+        </tr>
+        <tr style="border-top:2px solid var(--ink)">
+          <td class="muted" style="text-align:right">和</td>
+          <td class="digit s" id="rp_s4" style="font-size:22px;font-weight:800">0</td>
+          <td class="digit s" id="rp_s3" style="font-size:22px;font-weight:800">0</td>
+          <td class="digit s" id="rp_s2" style="font-size:22px;font-weight:800">0</td>
+          <td class="digit s" id="rp_s1" style="font-size:22px;font-weight:800">0</td>
+          <td class="muted" id="rp_Sdec">= 0</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="hint" style="text-align:center" id="rp_check">0 + 0 = 0 ✔</p>
+  <div class="note">
+    一番左に出た繰り上がり（<span id="rp_ovf">0</span>）は <b>5ビット目＝オーバーフロー</b>。
+    4ビットで表せる最大は 15 なので、それを超えると桁があふれます。
+  </div>
+</section>
+
+<!-- ================= 4. SUMMARY ================= -->
+<section class="card" id="summary">
+  <h2 class="sec"><span class="num">⑤</span> まとめ（半加算器 vs 全加算器）</h2>
+  <div class="tblwrap">
+    <table style="font-family:inherit">
+      <thead><tr>
+        <th></th><th>半加算器 (Half Adder)</th><th>全加算器 (Full Adder)</th>
+      </tr></thead>
+      <tbody style="font-family:inherit">
+        <tr><td class="muted" style="text-align:left">入力</td>
+          <td>A, B <span class="muted">(2つ)</span></td>
+          <td>A, B, Cin <span class="muted">(3つ)</span></td></tr>
+        <tr><td class="muted" style="text-align:left">出力</td>
+          <td><span class="pill sum">S</span> <span class="pill carry">C</span></td>
+          <td><span class="pill sum">Sum</span> <span class="pill carry">Cout</span></td></tr>
+        <tr><td class="muted" style="text-align:left">和 (sum)</td>
+          <td><code>A ⊕ B</code></td>
+          <td><code>A ⊕ B ⊕ Cin</code></td></tr>
+        <tr><td class="muted" style="text-align:left">繰り上がり (carry)</td>
+          <td><code>A · B</code></td>
+          <td><code>A·B + Cin·(A⊕B)</code></td></tr>
+        <tr><td class="muted" style="text-align:left">下位桁の繰り上がり</td>
+          <td>受け取れない ✕</td>
+          <td>受け取れる ○</td></tr>
+        <tr><td class="muted" style="text-align:left">使いどころ</td>
+          <td>最下位ビット (LSB) 専用</td>
+          <td>2ビット目以降すべて／連結して任意ビット</td></tr>
+        <tr><td class="muted" style="text-align:left">構成</td>
+          <td>XOR 1 + AND 1</td>
+          <td>半加算器 2 + OR 1</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <b>記号の対応（このページの用語）</b>
+    <ul class="clean" style="margin:8px 0 0">
+      <li><span class="pill hs">hs</span> = half-sum … 半加算器の和 <code>A ⊕ B</code></li>
+      <li><span class="pill hc">hc</span> = half-carry … 半加算器の繰り上がり <code>A · B</code></li>
+      <li><span class="pill sum">sum / S</span> … 最終的な「和」ビット</li>
+      <li><span class="pill carry">carry / C / Cout</span> … 上の桁への「繰り上がり」ビット</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  ⌨ ヒント：各ビットはクリック（またはタップ）で切り替え。真理値表の行クリックでも入力が動きます。<br>
+  Half Adder &amp; Full Adder — interactive explainer
+</footer>
+
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const AND=(a,b)=>a&b, OR=(a,b)=>a|b, XOR=(a,b)=>a^b;
+
+/* ---------- theme ---------- */
+(function(){
+  const btn=$('#themeBtn');
+  let t = localStorage.getItem('adder-theme');
+  if(t) document.documentElement.setAttribute('data-theme',t);
+  btn.onclick=()=>{
+    const cur=document.documentElement.getAttribute('data-theme');
+    const nx = cur==='light'?'dark':(cur==='dark'?'light':(matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+    document.documentElement.setAttribute('data-theme',nx);
+    localStorage.setItem('adder-theme',nx);
+  };
+})();
+
+/* token helper for equations */
+function tok(v){ return `<span class="tk ${v?'one':'zero'}">${v}</span>`; }
+function tokEq(v,hot){ return `<span class="tk ${v?'one':'zero'} ${hot?'eq1':''}">${v}</span>`; }
+
+/* ================= HALF ADDER ================= */
+const ha={A:0,B:0};
+function haToggle(k){ ha[k]^=1; haRender(); }
+$('#ha_A').onclick=()=>haToggle('A');
+$('#ha_B').onclick=()=>haToggle('B');
+
+// build truth table
+(function(){
+  const tb=$('#ha_tbl tbody');
+  for(let a=0;a<2;a++)for(let b=0;b<2;b++){
+    const s=XOR(a,b), c=AND(a,b);
+    const tr=document.createElement('tr');
+    tr.dataset.a=a; tr.dataset.b=b;
+    tr.innerHTML=`<td>${a}</td><td>${b}</td>
+      <td class="${c?'b1':''}">${c}</td><td class="${s?'b1':''}">${s}</td>`;
+    tr.onclick=()=>{ ha.A=a; ha.B=b; haRender(); };
+    tb.appendChild(tr);
+  }
+})();
+
+function setWire(id,hot){ const e=$(id); if(e) e.classList.toggle('hot',!!hot); }
+function setNode(id,hot){ const e=$(id); if(e) e.classList.toggle('hot',!!hot); }
+
+function haRender(){
+  const {A,B}=ha;
+  const S=XOR(A,B), C=AND(A,B);
+  $('#ha_A').textContent=A; $('#ha_A').classList.toggle('on',A);
+  $('#ha_B').textContent=B; $('#ha_B').classList.toggle('on',B);
+  $('#ha_S').textContent=S; $('#ha_C').textContent=C;
+  $('#ha_bS').textContent=S; $('#ha_bC').textContent=C;
+  // wires
+  setWire('#ha_wA_x',A); setWire('#ha_wA_a',A); setNode('#ha_nA',A);
+  setWire('#ha_wB_x',B); setWire('#ha_wB_a',B); setNode('#ha_nB',B);
+  setWire('#ha_wS',S); setWire('#ha_wC',C);
+  // equations
+  $('#ha_eqS').innerHTML=`<b>S</b> = A XOR B = ${tok(A)} ⊕ ${tok(B)} = <b>${tok(S)}</b>`;
+  $('#ha_eqC').innerHTML=`<b>C</b> = A AND B = ${tok(A)} · ${tok(B)} = <b>${tok(C)}</b>`;
+  // colsum
+  $('#ha_pa').textContent=A; $('#ha_pa').classList.toggle('on',A);
+  $('#ha_pb').textContent=B; $('#ha_pb').classList.toggle('on',B);
+  $('#ha_pc').textContent=C; $('#ha_ps').textContent=S;
+  // table active
+  document.querySelectorAll('#ha_tbl tbody tr').forEach(tr=>{
+    tr.classList.toggle('active', +tr.dataset.a===A && +tr.dataset.b===B);
+  });
+}
+haRender();
+
+/* ================= FULL ADDER ================= */
+const fa={A:0,B:0,Cin:0};
+$('#fa_A').onclick=()=>{fa.A^=1;faRender();};
+$('#fa_B').onclick=()=>{fa.B^=1;faRender();};
+$('#fa_Cin').onclick=()=>{fa.Cin^=1;faRender();};
+
+(function(){
+  const tb=$('#fa_tbl tbody');
+  for(let a=0;a<2;a++)for(let b=0;b<2;b++)for(let c=0;c<2;c++){
+    const sum=XOR(XOR(a,b),c);
+    const cout=OR(AND(a,b),AND(XOR(a,b),c));
+    const dec=a+b+c;
+    const tr=document.createElement('tr');
+    tr.dataset.a=a;tr.dataset.b=b;tr.dataset.c=c;
+    tr.innerHTML=`<td>${a}</td><td>${b}</td><td>${c}</td>
+      <td class="${cout?'b1':''}">${cout}</td><td class="${sum?'b1':''}">${sum}</td>
+      <td class="muted">${dec}</td>`;
+    tr.onclick=()=>{fa.A=a;fa.B=b;fa.Cin=c;faRender();};
+    tb.appendChild(tr);
+  }
+})();
+
+function faRender(){
+  const {A,B,Cin}=fa;
+  const hs=XOR(A,B), hc=AND(A,B);
+  const Sum=XOR(hs,Cin);
+  const hc2=AND(hs,Cin);
+  const Cout=OR(hc,hc2);
+  // buttons
+  $('#fa_A').textContent=A;$('#fa_A').classList.toggle('on',A);
+  $('#fa_B').textContent=B;$('#fa_B').classList.toggle('on',B);
+  $('#fa_Cin').textContent=Cin;$('#fa_Cin').classList.toggle('on',Cin);
+  // readouts
+  $('#fa_hs').textContent=hs; $('#fa_hc').textContent=hc;
+  $('#fa_Sum').textContent=Sum; $('#fa_Cout').textContent=Cout;
+  $('#fa_bSum').textContent=Sum; $('#fa_bCout').textContent=Cout;
+  // wires
+  setWire('#fa_wA',A); setWire('#fa_wB',B); setWire('#fa_wCin',Cin);
+  setWire('#fa_whs',hs); setWire('#fa_whc',hc);
+  setWire('#fa_wSum',Sum); setWire('#fa_whc2',hc2); setWire('#fa_wCout',Cout);
+  $('#fa_or').classList.toggle('hot',false);
+  // equations
+  $('#fa_eqHs').innerHTML=`<b>hs</b> = A⊕B = ${tok(A)}⊕${tok(B)} = <b>${tok(hs)}</b>　／　<b>hc</b> = A·B = ${tok(A)}·${tok(B)} = <b>${tok(hc)}</b>`;
+  $('#fa_eqSum').innerHTML=`<b>Sum</b> = hs ⊕ Cin = ${tok(hs)} ⊕ ${tok(Cin)} = <b>${tok(Sum)}</b>`;
+  $('#fa_eqCout').innerHTML=`<b>Cout</b> = hc + (hs·Cin) = ${tok(hc)} + (${tok(hs)}·${tok(Cin)}) = ${tok(hc)} + ${tok(hc2)} = <b>${tok(Cout)}</b>`;
+  // colsum
+  $('#fa_pa').textContent=A;$('#fa_pa').classList.toggle('on',A);
+  $('#fa_pb').textContent=B;$('#fa_pb').classList.toggle('on',B);
+  $('#fa_pcin').textContent=Cin;
+  $('#fa_pcout').textContent=Cout; $('#fa_psum').textContent=Sum;
+  $('#fa_cinlabel').style.visibility = Cin? 'visible':'hidden';
+  // table
+  document.querySelectorAll('#fa_tbl tbody tr').forEach(tr=>{
+    tr.classList.toggle('active', +tr.dataset.a===A&&+tr.dataset.b===B&&+tr.dataset.c===Cin);
+  });
+}
+faRender();
+
+/* ================= RIPPLE 4-bit ================= */
+const rp={A:[0,0,0,0], B:[0,0,0,0]};
+document.querySelectorAll('.rpbit').forEach(btn=>{
+  btn.onclick=()=>{
+    const s=btn.dataset.side, i=+btn.dataset.i;
+    rp[s][i]^=1; rpRender();
+  };
+});
+function toDec(arr){ return arr.reduce((acc,v,i)=>acc+v*(1<<i),0); }
+function rpRender(){
+  // update button visuals
+  document.querySelectorAll('.rpbit').forEach(btn=>{
+    const v=rp[btn.dataset.side][+btn.dataset.i];
+    btn.textContent=v; btn.classList.toggle('on',v);
+  });
+  // ripple add
+  let carry=0; const S=[0,0,0,0]; const C=[0,0,0,0,0];
+  for(let i=0;i<4;i++){
+    const a=rp.A[i], b=rp.B[i];
+    const sum=XOR(XOR(a,b),carry);
+    const cout=OR(AND(a,b),AND(XOR(a,b),carry));
+    S[i]=sum; carry=cout; C[i+1]=cout;
+  }
+  for(let i=1;i<=4;i++){ $('#rp_c'+i).textContent=C[i]; }
+  for(let i=0;i<4;i++){ const e=$('#rp_s'+(i+1)); e.textContent=S[i]; e.classList.toggle('on',S[i]); }
+  const Ad=toDec(rp.A), Bd=toDec(rp.B), Sd=Ad+Bd;
+  $('#rp_Adec').textContent='= '+Ad;
+  $('#rp_Bdec').textContent='= '+Bd;
+  $('#rp_Sdec').textContent='= '+(Sd);
+  $('#rp_ovf').textContent=C[4];
+  const bin=a=>a.slice().reverse().join('');
+  $('#rp_expr').textContent=`${bin(rp.A)} + ${bin(rp.B)}`;
+  const low = toDec(S); // 4-bit result (mod 16)
+  $('#rp_check').textContent = `${Ad} + ${Bd} = ${Sd}` + (C[4]? `（4bitでは ${low}、桁あふれ！）`:' ✔');
+}
+rpRender();
+</script>
+</body>
+</html>
